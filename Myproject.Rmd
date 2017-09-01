@@ -1,0 +1,124 @@
+---
+title: "My Project 1"
+author: "Gabriela Rodriguez"
+date: "1 de septiembre de 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+In this first step we are going to load the data from activity.csv and we are going to clean it, quiting NA's and transforming date into "date format"
+
+```{r echo=TRUE}
+library(readr)
+activity <- read_csv("~/Curso Data Science/activity.csv")
+d <- na.omit(activity)
+d$date <- as.Date(d$date, format("%d/%m/%Y"))
+
+```
+
+## What is mean total number of steps taken per day
+
+First, we are going to calculate the total number of steps taken per day using the function aggregate and make a histogram of the total
+
+```{r echo=TRUE}
+f <- aggregate(d$steps, by=list(d$date), FUN=sum)
+f$Group.1 <- as.Date(f$Group.1,  format("%d/%m/%Y"))
+library(ggplot2)
+total <- ggplot(f, aes(x=Group.1, y=x)) + geom_bar(stat="identity") + labs(x= "Date", y = "Number of steps")
+plot(total)
+```
+
+Now, we are going to calculate the mean and median total number of steps taken per day 
+    ```{r echo=TRUE}
+means <- aggregate(d$steps, by=list(d$date), FUN=mean)
+
+library(knitr)
+kable(means, caption = "Mean steps per day")
+medians  <- aggregate(d$steps, by=list(d$date), FUN=median)
+kable(medians, caption = "Median steps per day")
+```
+## What is the average daily activity patern
+
+In this question we are going to make a time series plot of the 5 minute interval and the average number of steps taken averaged across all days.
+
+```{r echo=TRUE}
+meansperinterval <- aggregate(d$steps, by=list(d$interval), FUN=mean)
+p2 <- ggplot(meansperinterval, aes(x=Group.1, y=x)) + geom_line(stat="identity") + labs(x= "Interval", y = "Average number of steps")
+plot(p2)
+```
+
+Now we are going to calculate which 5 minute interval, on average across all the days contains the maximun number of steps
+
+```{r echo=TRUE}
+max <- which.max(meansperinterval[,2])
+maxi <- meansperinterval[max,1]
+print("The interval with the maximun number of steps is ")
+maxi
+```
+##Imputing missing values 
+
+In this section, we are going to find how many NA's are present and we are going to change them, NA's will take the mean of the number of steps on this particular day.
+
+```{r echo=TRUE}
+NAs <- sum(is.na(activity))
+print("The number of NA´s is")
+NAs
+```
+
+Now, we are going to fill NA's wit the average number of steps of that day.
+With this new dataset we are going to make a histogram of the total number of steps taken each day.
+
+```{r echo=TRUE}
+activity[is.na(activity)]  <- mean(d$steps)
+f1 <- aggregate(activity$steps, by=list(activity$date), FUN=sum)
+
+f1$Group.1 <- as.Date(f1$Group.1,  format("%d/%m/%Y"))
+
+p3 <- ggplot(f1, aes(x=Group.1, y=x)) + geom_bar(stat="identity") + labs(x= "Date", y = "Number of steps")
+plot(p3)
+```
+In this new dataset we are going to calculate the mean and the median 
+
+```{r}
+means2 <- aggregate(activity$steps, by=list(activity$date), FUN=mean)
+medians2  <- aggregate(activity$steps, by=list(activity$date), FUN=median)
+library(knitr)
+kable(means2, caption = "Mean steps per day")
+kable(medians, caption = "Median steps per day")
+    
+```
+
+So, it is posible to notice that values are different than the fist ones, indicating the importance of the substitution of NA's with known values. 
+
+##Are there differences in activity patterns between weekdays and weekends
+
+This will be done in two parts, in the first one we are going to create a new factor wit two levels "weekday" or "weekend". 
+Then, we are going to make a plot containing a time series of the 5 minute interval averaged per interval per weekend or weekday
+```{r echo=TRUE}
+weekdays1 <- c("lunes","lunes","martes","miércoles", "jueves", "viernes")
+activity$wday <- c("weekend", "weekday")[(weekdays(as.Date(activity$date, format("%d/%m/%Y") )) %in% weekdays1)+1L]
+library(ggplot2)
+library(gridExtra)
+library(plotly)
+
+d1 <- subset(activity,wday == "weekday")
+meansperinterval1 <- aggregate(d1$steps, by=list(d1$interval), FUN=mean)
+g1 <- ggplot(meansperinterval1, aes(x=Group.1, y=x)) + geom_line(stat="identity") + labs(x= "Interval", y = "Average number of steps", title = "Weekdays")
+
+d2 <- subset(activity,wday == "weekend")
+meansperinterval2 <- aggregate(d2$steps, by=list(d2$interval), FUN=mean)
+g2<- ggplot(meansperinterval2, aes(x=Group.1, y=x)) + geom_line(stat="identity") + labs(x= "Interval", y = "Average number of steps", title = "Weekends") + ggtitle("Weekends")
+p4 <- grid.arrange(g1,g2, ncol=1, nrow=2)
+
+
+```
+
